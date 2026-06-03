@@ -8,6 +8,7 @@ $cacheTtl  = 300; // 5 minut
 
 header('Content-Type: application/json');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Access-Control-Allow-Origin: https://sielata.com.pl');
 
 // Jeśli cache jest świeży — użyj go
 if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTtl) {
