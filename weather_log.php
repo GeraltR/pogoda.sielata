@@ -1,5 +1,13 @@
 <?php
 
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/cron_error.log');
+error_reporting(E_ALL);
+
+echo "start\n";
+// ... reszta kodu
+
 // ===== WCZYTANIE .env DO TABLICY =====
 $envPath = __DIR__ . '/../.env';
 $ENV = [];
@@ -60,3 +68,10 @@ curl_setopt_array($ch, [
 ]);
 curl_exec($ch);
 curl_close($ch);
+
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+echo "HTTP: $httpCode\n";
+echo "Response: $response\n";
