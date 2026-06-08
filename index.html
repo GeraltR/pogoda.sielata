@@ -462,6 +462,11 @@ async function loadHistory() {
   const hums      = data.map(r => r.humidity);
   const pressures = data.map(r => r.pressure);
   const xScale = { ticks: { color: TICK, maxTicksLimit: 7, font: { size: 10 } }, grid: { color: GRID } };
+  const tempMin = Math.min(...temps) - 10;
+  const tempMax = Math.max(...temps) + 10;
+  const humMin  = Math.max(0,   Math.min(...hums) - 50);
+  const humMax  = Math.min(100, Math.max(...hums) + 50);
+
   if (chartTH) chartTH.destroy();
   chartTH = new Chart(document.getElementById('chart-th'), {
     type: 'line',
@@ -471,7 +476,10 @@ async function loadHistory() {
     ]},
     options: { responsive: true, animation: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { labels: { color: TICK, boxWidth: 10, font: { size: 11 } } } },
-      scales: { x: xScale, y: { position: 'left',  ticks: { color: '#fb923c', font: { size: 10 } }, grid: { color: GRID } }, y1: { position: 'right', ticks: { color: '#38bdf8', font: { size: 10 } }, grid: { drawOnChartArea: false } } }
+      scales: { x: xScale, 
+                y:  { min: tempMin, max: tempMax, position: 'left',  ticks: { color: '#fb923c', font: { size: 10 } }, grid: { color: GRID } },
+                y1: { min: humMin,  max: humMax,  position: 'right', ticks: { color: '#38bdf8', font: { size: 10 } }, grid: { drawOnChartArea: false } }
+              }
     }
   });
   if (chartP) chartP.destroy();
