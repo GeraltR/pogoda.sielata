@@ -6,9 +6,21 @@ $stationId = 'IJAWOR79';
 $cacheFile = __DIR__ . '/weather_cache.json';
 $cacheTtl  = 300; // 5 minut
 
+$allowedOrigins = [
+    'https://sielata.com.pl',
+    'https://www.sielata.com.pl',
+    'http://localhost:5174',
+    'http://localhost:5173',
+];
+
 header('Content-Type: application/json');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Access-Control-Allow-Origin: https://sielata.com.pl');
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowedOrigins)) {
+    header("Access-Control-Allow-Origin: $origin");
+}
 
 // Jeśli cache jest świeży — użyj go
 if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTtl) {
