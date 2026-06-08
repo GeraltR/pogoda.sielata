@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pogoda – Sielata</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0b0f1a;
+    color: #e2e8f0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 1.5rem;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #1a2035;
+  }
+
+  header h1 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  header h1 span { color: #38bdf8; }
+
+  #last-update {
+    font-size: 0.75rem;
+    color: #334155;
+  }
+
+  /* ── MAIN GRID ── */
+  .grid-main {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.875rem;
+    margin-bottom: 0.875rem;
+  }
+
+  .card {
+    background: #111827;
+    border: 1px solid #1a2035;
+    border-radius: 1rem;
+    padding: 1.1rem 1.25rem 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent, #38bdf8);
+    border-radius: 1rem 1rem 0 0;
+    opacity: 0.8;
+  }
+
+  .label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #374151;
+    margin-bottom: 0.6rem;
+  }
+
+  .value {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--accent, #38bdf8);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .unit {
+    font-size: 1rem;
+    font-weight: 400;
+    color: #4b5563;
+    margin-left: 0.15rem;
+  }
+
+  .sub {
+    font-size: 0.72rem;
+    color: #374151;
+    margin-top: 0.5rem;
+  }
+
+  .card-temp     { --accent: #fb923c; }
+  .card-humidity { --accent: #38bdf8; }
+  .card-pressure { --accent: #a78bfa; }
+  .card-wind     { --accent: #34d399; }
+  .card-rain     { --accent: #60a5fa; }
+
+  /* ── COMPASS ── */
+  .compass-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 0.75rem;
+    gap: 0.3rem;
+  }
+
+  #wind-dir-label {
+    font-size: 0.7rem;
+    color: #4b5563;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── RAIN BAR ── */
+  .rain-bar-track {
+    margin-top: 0.9rem;
+    height: 6px;
+    background: #1a2035;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .rain-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.8s ease;
+  }
+
+  /* ── CHARTS ── */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 0.875rem;
+  }
+
+  @media (max-width: 700px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .value { font-size: 2.4rem; }
+  }
+
+  .chart-card {
+    background: #111827;
+    border: 1px solid #1a2035;
+    border-radius: 1rem;
+    padding: 1.1rem 1.25rem 1rem;
+  }
+
+  .chart-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #374151;
+    margin-bottom: 0.9rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📡 Stacja <span>Sielata</span></h1>
+  <div id="last-update">ładowanie…</div>
+</header>
+
+<div class="grid-main">
+
+  <div class="card card-temp">
+    <div class="label">Temperatura</div>
+    <div class="value" id="temp">–<span class="unit">°C</span></div>
+  </div>
+
+  <div class="card card-humidity">
+    <div class="label">Wilgotność</div>
+    <div class="value" id="humidity">–<span class="unit">%</span></div>
+  </div>
+
+  <div class="card card-pressure">
+    <div class="label">Ciśnienie</div>
+    <div class="value" id="pressure">–<span class="unit" style="font-size:.8rem"> hPa</span></div>
+  </div>
+
+  <div class="card card-wind">
+    <div class="label">Wiatr</div>
+    <div class="value" id="wind">–<span class="unit"> km/h</span></div>
+    <div class="compass-wrap">
+      <svg id="compass" width="68" height="68" viewBox="0 0 68 68" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="34" cy="34" r="31" fill="none" stroke="#1a2035" stroke-width="1.5"/>
+        <circle cx="34" cy="34" r="2" fill="#374151"/>
+        <!-- tick marks -->
+        <line x1="34" y1="4"  x2="34" y2="10" stroke="#1a2035" stroke-width="1.5"/>
+        <line x1="34" y1="58" x2="34" y2="64" stroke="#1a2035" stroke-width="1.5"/>
+        <line x1="4"  y1="34" x2="10" y2="34" stroke="#1a2035" stroke-width="1.5"/>
+        <line x1="58" y1="34" x2="64" y2="34" stroke="#1a2035" stroke-width="1.5"/>
+        <!-- cardinal labels -->
+        <text x="34" y="20" text-anchor="middle" fill="#6b7280" font-size="7" font-weight="700" font-family="system-ui">N</text>
+        <text x="34" y="53" text-anchor="middle" fill="#4b5563" font-size="7" font-weight="700" font-family="system-ui">S</text>
+        <text x="52" y="37" text-anchor="middle" fill="#4b5563" font-size="7" font-weight="700" font-family="system-ui">E</text>
+        <text x="16" y="37" text-anchor="middle" fill="#4b5563" font-size="7" font-weight="700" font-family="system-ui">W</text>
+        <!-- arrow, rotated by JS around center -->
+        <g id="compass-arrow" transform="rotate(0,34,34)">
+          <polygon points="34,8 37,34 34,30 31,34" fill="#34d399" opacity="0.9"/>
+          <polygon points="34,60 37,34 34,38 31,34" fill="#374151"/>
+        </g>
+      </svg>
+      <div id="wind-dir-label">–</div>
+    </div>
+  </div>
+
+  <div class="card card-rain">
+    <div class="label">Opad</div>
+    <div class="value" id="rain">–<span class="unit"> mm/h</span></div>
+    <div class="rain-bar-track"><div class="rain-bar-fill" id="rain-bar"></div></div>
+    <div class="sub" id="rain-desc"></div>
+  </div>
+
+</div>
+
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-title">Temperatura &amp; Wilgotność — ostatnie 24h</div>
+    <canvas id="chart-th"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Ciśnienie — ostatnie 24h</div>
+    <canvas id="chart-p"></canvas>
+  </div>
+</div>
+
+<script>
+const CURRENT_URL = 'https://pogoda.sielata.com.pl/weather.php';
+const HISTORY_URL = 'https://api.sielata.com.pl/public/api/weather/history';
+
+const GRID   = '#1a2035';
+const TICK   = '#4b5563';
+
+function dirLabel(deg) {
+  const d = ['N','NE','E','SE','S','SW','W','NW'];
+  return d[Math.round(((deg % 360) + 360) % 360 / 45) % 8];
+}
+
+function rainDesc(mm) {
+  if (!mm || mm === 0) return 'brak opadu';
+  if (mm < 0.5)  return 'mżawka';
+  if (mm < 2.5)  return 'lekki deszcz';
+  if (mm < 7.5)  return 'umiarkowany deszcz';
+  return 'intensywny deszcz';
+}
+
+async function loadCurrent() {
+  const res = await fetch(CURRENT_URL);
+  const d   = await res.json();
+
+  document.getElementById('temp').innerHTML     = `${d.temp}<span class="unit">°C</span>`;
+  document.getElementById('humidity').innerHTML = `${d.humidity}<span class="unit">%</span>`;
+  document.getElementById('pressure').innerHTML = `${d.pressure}<span class="unit" style="font-size:.8rem"> hPa</span>`;
+  document.getElementById('wind').innerHTML     = `${d.wind}<span class="unit"> km/h</span>`;
+  document.getElementById('rain').innerHTML     = `${d.rain}<span class="unit"> mm/h</span>`;
+
+  document.getElementById('compass-arrow').setAttribute('transform', `rotate(${d.windDir},34,34)`);
+  document.getElementById('wind-dir-label').textContent = dirLabel(d.windDir);
+
+  const pct = Math.min((d.rain / 20) * 100, 100);
+  document.getElementById('rain-bar').style.width = pct + '%';
+  document.getElementById('rain-desc').textContent = rainDesc(d.rain);
+
+  document.getElementById('last-update').textContent = 'Ostatni odczyt: ' + d.time;
+}
+
+let chartTH, chartP;
+
+async function loadHistory() {
+  const res  = await fetch(HISTORY_URL);
+  const data = await res.json();
+
+  const labels    = data.map(r => {
+    const dt = new Date(r.time * 1000);
+    return dt.getHours().toString().padStart(2,'0') + ':' + dt.getMinutes().toString().padStart(2,'0');
+  });
+  const temps     = data.map(r => r.temp);
+  const hums      = data.map(r => r.humidity);
+  const pressures = data.map(r => r.pressure);
+
+  const baseScales = {
+    x: {
+      ticks: { color: TICK, maxTicksLimit: 7, font: { size: 10 } },
+      grid:  { color: GRID }
+    }
+  };
+
+  if (chartTH) chartTH.destroy();
+  chartTH = new Chart(document.getElementById('chart-th'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Temp (°C)',
+          data: temps,
+          borderColor: '#fb923c',
+          backgroundColor: 'rgba(251,146,60,0.08)',
+          fill: true, tension: 0.35, pointRadius: 0,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Wilgotność (%)',
+          data: hums,
+          borderColor: '#38bdf8',
+          backgroundColor: 'transparent',
+          fill: false, tension: 0.35, pointRadius: 0,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: TICK, boxWidth: 10, font: { size: 11 } } }
+      },
+      scales: {
+        ...baseScales,
+        y:  { position: 'left',  ticks: { color: '#fb923c', font: { size: 10 } }, grid: { color: GRID } },
+        y1: { position: 'right', ticks: { color: '#38bdf8', font: { size: 10 } }, grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+
+  if (chartP) chartP.destroy();
+  chartP = new Chart(document.getElementById('chart-p'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Ciśnienie (hPa)',
+        data: pressures,
+        borderColor: '#a78bfa',
+        backgroundColor: 'rgba(167,139,250,0.08)',
+        fill: true, tension: 0.35, pointRadius: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: TICK, boxWidth: 10, font: { size: 11 } } }
+      },
+      scales: {
+        ...baseScales,
+        y: { ticks: { color: '#a78bfa', font: { size: 10 } }, grid: { color: GRID } }
+      }
+    }
+  });
+}
+
+async function refresh() {
+  await Promise.all([loadCurrent(), loadHistory()]);
+}
+
+refresh();
+setInterval(refresh, 5 * 60 * 1000);
+</script>
+</body>
+</html>

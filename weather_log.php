@@ -32,33 +32,31 @@ if (
 
 // ===== RESZTA KODU (logger) =====
 $weatherUrl  = 'https://pogoda.sielata.com.pl/weather.php';
-$historyFile = __DIR__ . '/history.json';
 
 $json = file_get_contents($weatherUrl);
-if ($json === false) {
-    exit;
-}
+if ($json === false) exit;
 
 $data = json_decode($json, true);
-if (!$data || !isset($data['temp'])) {
-    exit;
-}
+if (!$data || !isset($data['temp'])) exit;
 
-$history = [];
-if (file_exists($historyFile)) {
-    $history = json_decode(file_get_contents($historyFile), true) ?? [];
-}
-
-$history[] = [
-    'time'     => time(),
+// zamiast file_put_contents...
+$payload = json_encode([
     'temp'     => $data['temp'],
     'humidity' => $data['humidity'],
     'pressure' => $data['pressure'],
     'wind'     => $data['wind'],
-    'rain'     => $data['rain']
-];
+    'rain'     => $data['rain'],
+]);
 
-// 24h = 288 wpisów
-$history = array_slice($history, -288);
+$laravelUrl = 'https://api.sielata.com.pl/public/api/weather/log?key=' . $ENV['WEATHER_CRON_TOKEN'];
 
-file_put_contents($historyFile, json_encode($history));
+$ch = curl_init($laravelUrl);
+curl_setopt_array($ch, [
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $payload,
+    CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json'],
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 10,
+]);
+curl_exec($ch);
+curl_close($ch);
